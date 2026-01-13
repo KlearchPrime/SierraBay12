@@ -1,5 +1,5 @@
 //КЛИИК
-/mob/ClickOn(atom/A, params)
+/mob/ClickOn(atom/A, params, use_in_world = FALSE)
 
 	if(world.time <= next_click) // Hard check, before anything else, to avoid crashing
 		return
@@ -7,28 +7,28 @@
 	next_click = world.time + 1
 
 	var/list/modifiers = params2list(params)
-	if (modifiers["ctrl"] && modifiers["alt"] && modifiers["shift"])
+	if (modifiers[MOUSE_CTRL] && modifiers[MOUSE_ALT] && modifiers[MOUSE_SHIFT])
 		if (CtrlAltShiftClickOn(A))
 			return
-	else if (modifiers["shift"] && modifiers["ctrl"])
+	else if (modifiers[MOUSE_SHIFT] && modifiers[MOUSE_CTRL])
 		if (CtrlShiftClickOn(A))
 			return
-	else if (modifiers["ctrl"] && modifiers["alt"])
+	else if (modifiers[MOUSE_CTRL] && modifiers[MOUSE_ALT])
 		if (CtrlAltClickOn(A))
 			return
-	else if (modifiers["shift"] && modifiers["alt"])
+	else if (modifiers[MOUSE_SHIFT] && modifiers[MOUSE_ALT])
 		if (AltShiftClickOn(A))
 			return
-	else if (modifiers["middle"])
+	else if (modifiers[MOUSE_3])
 		if (MiddleClickOn(A))
 			return
-	else if (modifiers["shift"])
+	else if (modifiers[MOUSE_SHIFT])
 		if (ShiftClickOn(A))
 			return
-	else if (modifiers["alt"])
+	else if (modifiers[MOUSE_ALT])
 		if (AltClickOn(A))
 			return
-	else if (modifiers["ctrl"])
+	else if (modifiers[MOUSE_CTRL])
 		if (CtrlClickOn(A))
 			return
 
@@ -55,6 +55,8 @@
 		throw_mode_off()
 
 	var/obj/item/W = get_active_hand()
+	if (use_in_world)
+		W = null
 
 	if(W == A) // Handle attack_self
 		W.attack_self(src)
@@ -76,7 +78,7 @@
 		else
 			if(ismob(A)) // No instant mob attacking
 				setClickCooldown(DEFAULT_ATTACK_COOLDOWN)
-			UnarmedAttack(A, 1)
+			UnarmedAttack(A, 1, use_in_world)
 
 		trigger_aiming(TARGET_CAN_CLICK)
 		return
@@ -87,6 +89,9 @@
 	//Atoms on turfs (not on your person)
 	// A is a turf or is on a turf, or in something on a turf (pen in a box); but not something in something on a turf (pen in a box in a backpack)
 	sdepth = A.storage_depth_turf()
+	if(istype(W, /obj/item/gun) && lying)
+		to_chat(src, SPAN_BAD("I can't use weapon in this position"))
+		return
 	if(isturf(A) || isturf(A.loc) || (sdepth != -1 && sdepth <= 1))
 		if(A.Adjacent(src)) // see adjacent.dm
 			if(W)
@@ -97,15 +102,12 @@
 			else
 				if(ismob(A)) // No instant mob attacking
 					setClickCooldown(DEFAULT_ATTACK_COOLDOWN)
-				UnarmedAttack(A, 1)
+				UnarmedAttack(A, 1, use_in_world)
 
 			trigger_aiming(TARGET_CAN_CLICK)
 			return
 		else // non-adjacent click
 			if(W) //Стрелять лёжа плохо
-				if(istype(W, /obj/item/gun) && lying)
-					to_chat(src, SPAN_BAD("I can't use weapon in this position"))
-					return
 				W.afterattack(A, src, 0, modifiers) // 0: not Adjacent
 			else
 				RangedAttack(A, modifiers)
